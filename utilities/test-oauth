@@ -1,0 +1,93 @@
+#!/bin/bash 
+
+CLIENT_ID=yxyLgQWq2lF5951m32RaBFPKaddoyKquRBfYNsHk
+CLIENT_KEY=VuiPjPbx8lkSAGUPPmwYf1IzjtsbF7OGOUEyCm2Pz54x3DlMSenpIHmnMIkGC37XYtGgq23jlhexTCwRdcYvgwSljzHwK81cFWc94umIy1Ui25BCImdkZcEwvsoOifuS
+
+COOKIE_JAR=$PWD/cookies
+ACCESS_TOKEN=$PWD/token
+
+AUTHENTICATION_SERVER=http://127.0.0.1:8000
+OAUTH_SERVER=http://127.0.0.1:8000
+RESOURCE_SERVER=http://127.0.0.1:8000
+CLIENT=http://127.0.0.1:8000
+
+OUTPUT=output
+mkdir -p output
+
+set -eux
+
+# Login while respecting CSRF
+curl -v \
+     -c $COOKIE_JAR \
+     -b $COOKIE_JAR \
+     $AUTHENTICATION_SERVER/login/ \
+    | pup 'form input[name="csrfmiddlewaretoken"] json{}' \
+    | jq -r '"username=dacoda&password=this is my password&next=&csrfmiddlewaretoken=\(.[0].value)"' \
+    | curl -c $COOKIE_JAR \
+           -b $COOKIE_JAR \
+           $AUTHENTICATION_SERVER/login/ \
+           -d@/dev/stdin \
+    | tee $OUTPUT/login-response.html
+
+# Ask OAuth for authorization page
+AUTHORIZATION_PAGE=$(
+    curl -v \
+         -c $COOKIE_JAR \
+         -b $COOKIE_JAR \
+         -H "Content-Type: application/json" \
+         "${OAUTH_SERVER}/oauth/authorize/?client_id=${CLIENT_ID}&response_type=code" \
+         2>${OUTPUT}/authorization-page.html.stderr \
+         | tee ${OUTPUT}/authorization-page.html
+    )
+
+# POST "Authorize" to authorization page, get response (a redirection
+# to the CLIENT's EXCHANGE API, (specified in the redirect portion))
+AUTHORIZATION_PAGE_POST_RESPONSE=$(
+    echo "$AUTHORIZATION_PAGE" \
+        | pup "form input json{}" \
+        | jq -r '.[] | select(.type == "hidden") | "\(.name)=\(.value)"' \
+        | tr '\n' '&' \
+        | cat - <(echo "&allow=Authorize") \
+        | curl -v \
+               -c $COOKIE_JAR \
+               -b $COOKIE_JAR \
+               $OAUTH_SERVER/oauth/authorize/ \
+               -d@/dev/stdin \
+               2>&1 \
+        | tee ${OUTPUT}/authorization-page-post-response.html
+                                )
+
+# Pretend to be client and consume authorization code
+AUTHORIZATION_CODE=$(
+    echo "$AUTHORIZATION_PAGE_POST_RESPONSE" \
+        | grep "Location" \
+        | sed 's/.*code=\(.*\)&state.*/\1/'
+                  )
+
+echo "AUTHORIZATION_CODE: $AUTHORIZATION_CODE"
+
+# Use authorization code to get access token
+ACCESS_TOKEN_RESPONSE=$(
+    # Now that I have my authorization code, let me get an access token 
+    cat <<-EOF | tr '\n' '&' | curl -v \
+                                   -c $COOKIE_JAR \
+                                   -b $COOKIE_JAR \
+                                   ${OAUTH_SERVER}/oauth/token/ \
+                                   -d@/dev/stdin 
+	grant_type=authorization_code
+	code=$AUTHORIZATION_CODE
+	redirect_uri=http://127.0.0.1:8000/exchange
+	client_id=${CLIENT_ID}
+	client_secret=${CLIENT_KEY}
+	EOF
+                     )
+
+echo $ACCESS_TOKEN_RESPONSE
+ACCESS_TOKEN=$(echo $ACCESS_TOKEN_RESPONSE | jq -r '.access_token')
+
+# Use access token to access API
+curl -v \
+     -c $COOKIE_JAR \
+     -b $COOKIE_JAR \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     ${RESOURCE_SERVER}/api/hello

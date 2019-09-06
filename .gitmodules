@@ -1,0 +1,3 @@
+[submodule "orihime"]
+	path = orihime
+	url = https://github.com/dacodas/orihime
