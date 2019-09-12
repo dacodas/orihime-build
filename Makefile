@@ -1,13 +1,11 @@
 build:
-	docker build -t orihime-django:development . 
-
-build-local:
-	docker build \
-		--tag orihime-django:development \
-		container
+	buildah bud \
+		--build-arg GIT_BRANCH=development \
+		--tag container-registry.dacodastrack.com/orihime-django \
+		./container
 
 push:
-	docker tag orihime-django:development container-registry.dacodastrack.com/orihime-django
+	buildah push container-registry.dacodastrack.com/orihime-django
 
 run-local:
 	PYTHONPATH=$(PWD) \
@@ -17,12 +15,16 @@ run-local:
 	django-admin check
 
 run-docker: 
-	docker run \
+	podman run \
 	    --rm \
 	    --name orihime-django \
 	    --network orihime-django \
 	    --publish 8000:80 \
 	    --env SECRET_KEY=eEpacHhuTVc5c1hkQ0xIVThlZUZVUmVjR3RqS2RmV0UwYkFFcURWYVgzYU5RZHpQ \
+		--env PYTHONPATH=/usr/local/src/orihime-django \
+		--env DJANGO_SETTINGS_MODULE=orihime.settings \
+		--env ORIHIME_DJANGO_ENVIRONMENT=local \
+		--env SECRET_KEY=eEpacHhuTVc5c1hkQ0xIVThlZUZVUmVjR3RqS2RmV0UwYkFFcURWYVgzYU5RZHpQ \
 	    --volume /tmp/orihime-django/logs:/var/log/orihime-django \
 	    --volume /tmp/orihime-django/lib:/var/lib/orihime-django \
 	    --volume /home/dacoda/orihime-django/orihime-django/srv:/srv/orihime-django \
