@@ -1,0 +1,68 @@
+#!/bin/bash
+
+set -ex
+
+GIT_URL=https://github.com/dacodas/orihime.git
+GIT_BRANCH=development
+GIT_BUILD=false
+FROM_PREVIOUS=true
+
+function base()
+{
+    buildah config \
+            -e PYTHONPATH=/usr/local/src/orihime-django \
+            -e DJANGO_SETTINGS_MODULE=orihime.settings \
+            -e GIT_URL=$GIT_URL \
+            -e GIT_BRANCH=$GIT_BRANCH \
+            --workingdir /usr/local/src/orihime-django \
+            --cmd "./entrypoint.bash" \
+            "$CONTAINER"
+
+    MOUNT=$(buildah mount "$CONTAINER")
+
+    while read SOURCE DESTINATION
+    do
+        mkdir -p "$MOUNT/$(dirname $DESTINATION)"
+        cp "$SOURCE" "$MOUNT/$DESTINATION"
+    done <<EOF
+requirements.txt /usr/local/src/orihime-django/requirements.txt
+entrypoint.bash /usr/local/src/orihime-django/entrypoint.bash
+zz-orihime-django.conf /etc/apache2/conf-enabled/zz-orihime-django.conf
+apache2.conf /tmp/apache2.conf
+EOF
+
+    # Unsure how arguments are passed and all here
+    COMMAND=$(cat <<EOF
+cd /usr/local/src/orihime-django && \
+    apt-get update && \
+    apt-get install -y apache2 libapache2-mod-wsgi-py3 less vim && \
+    pip install -r requirements.txt
+EOF
+           )
+
+    buildah run "$CONTAINER" -- sh -c "$COMMAND"
+    buildah run "$CONTAINER" cp /tmp/apache2.conf /etc/apache2/apache2.conf
+
+}
+
+
+if [ "$FROM_PREVIOUS" = "true" ]
+then
+    CONTAINER=$(buildah from container-registry.dacodastrack.com/orihime-django)
+else
+    CONTAINER=$(buildah from docker.io/python:buster)
+    base 
+fi
+
+if [ "$GIT_BUILD" = "true" ]
+then
+    buildah run "$CONTAINER" sh -c "cd /usr/local/src/orihime-django/ && git clone --depth 1 --branch $GIT_BRANCH $GIT_URL"
+else
+    buildah copy "$CONTAINER" ../orihime /usr/local/src/orihime-django/orihime
+fi
+
+IMAGE_ID=$(buildah commit "$CONTAINER" container-registry.dacodastrack.com/orihime-django)
+
+echo "Pushing image '$IMAGE_ID'"
+
+skopeo copy containers-storage:$IMAGE_ID containers-storage:container-registry.dacodastrack.com/orihime-django
