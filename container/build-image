@@ -65,4 +65,5 @@ IMAGE_ID=$(buildah commit "$CONTAINER" container-registry.dacodastrack.com/orihi
 
 echo "Pushing image '$IMAGE_ID'"
 
+skopeo copy containers-storage:$IMAGE_ID docker://container-registry.dacodastrack.com/orihime-django
 skopeo copy containers-storage:$IMAGE_ID containers-storage:container-registry.dacodastrack.com/orihime-django
