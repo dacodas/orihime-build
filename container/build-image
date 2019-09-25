@@ -2,10 +2,12 @@
 
 set -ex
 
-GIT_URL=https://github.com/dacodas/orihime.git
-GIT_BRANCH=development
-GIT_BUILD=false
-FROM_PREVIOUS=true
+: ${GIT_URL:=https://github.com/dacodas/orihime.git}
+: ${GIT_BRANCH:=development}
+: ${GIT_BUILD:=false}
+: ${FROM_PREVIOUS:=true}
+: ${IMAGE_TAG:=unset}
+: ${IMAGE_NAME:=container-registry.dacodastrack.com/orihime-django:$IMAGE_TAG}
 
 function base()
 {
@@ -45,10 +47,9 @@ EOF
 
 }
 
-
 if [ "$FROM_PREVIOUS" = "true" ]
 then
-    CONTAINER=$(buildah from container-registry.dacodastrack.com/orihime-django)
+    CONTAINER=$(buildah from containers-storage:$IMAGE_NAME)
 else
     CONTAINER=$(buildah from docker.io/python:buster)
     base 
@@ -61,9 +62,9 @@ else
     buildah copy "$CONTAINER" ../orihime /usr/local/src/orihime-django/orihime
 fi
 
-IMAGE_ID=$(buildah commit "$CONTAINER" container-registry.dacodastrack.com/orihime-django)
+IMAGE_ID=$(buildah commit "$CONTAINER" $IMAGE_NAME)
 
 echo "Pushing image '$IMAGE_ID'"
+skopeo copy containers-storage:$IMAGE_NAME docker://$IMAGE_NAME
 
-skopeo copy containers-storage:$IMAGE_ID docker://container-registry.dacodastrack.com/orihime-django
-skopeo copy containers-storage:$IMAGE_ID containers-storage:container-registry.dacodastrack.com/orihime-django
+# skopeo copy containers-storage:$IMAGE_ID containers-storage:container-registry.dacodastrack.com/orihime-django
