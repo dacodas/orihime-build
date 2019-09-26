@@ -37,19 +37,21 @@ EOF
     COMMAND=$(cat <<EOF
 cd /usr/local/src/orihime-django && \
     apt-get update && \
-    apt-get install -y apache2 libapache2-mod-wsgi-py3 less vim && \
+    apt-get install -y apache2 libapache2-mod-wsgi-py3 less vim gettext && \
     pip install -r requirements.txt
 EOF
            )
 
     buildah run "$CONTAINER" -- sh -c "$COMMAND"
     buildah run "$CONTAINER" cp /tmp/apache2.conf /etc/apache2/apache2.conf
-
 }
 
 if [ "$FROM_PREVIOUS" = "true" ]
 then
     CONTAINER=$(buildah from containers-storage:$IMAGE_NAME)
+
+    # For temporary copying if needed
+    # MOUNT=$(buildah mount "$CONTAINER")
 else
     CONTAINER=$(buildah from docker.io/python:buster)
     base 

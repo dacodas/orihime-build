@@ -11,5 +11,21 @@ ORIHIME_NAMESPACE
 EOF
 
 django-admin migrate --run-syncdb
-django-admin collectstatic
+yes yes | django-admin collectstatic
+
+( cd /usr/local/src/orihime-django/orihime ; django-admin makemessages -l ja )
+
+while read DIRECTORY
+do
+    ( cd "$DIRECTORY" ; django-admin compilemessages )
+done <<EOF
+/usr/local/src/orihime-django/orihime
+/usr/local/lib/python3.7/site-packages/django_registration
+/usr/local/lib/python3.7/site-packages/rest_framework
+EOF
+
+
+echo "Running with the following packages:"
+pip freeze
+
 apache2ctl -D FOREGROUND
