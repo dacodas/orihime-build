@@ -52,6 +52,7 @@ then
 
     # For temporary copying if needed
     # MOUNT=$(buildah mount "$CONTAINER")
+
 else
     CONTAINER=$(buildah from docker.io/python:buster)
     base 
