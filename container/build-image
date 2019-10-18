@@ -2,11 +2,12 @@
 
 set -ex
 
+: ${IMAGE_TAG:?Please define this}
+: ${FROM_PREVIOUS:?Please define this}
+
 : ${GIT_URL:=https://github.com/dacodas/orihime.git}
 : ${GIT_BRANCH:=development}
 : ${GIT_BUILD:=false}
-: ${FROM_PREVIOUS:=true}
-: ${IMAGE_TAG:=unset}
 : ${IMAGE_NAME:=container-registry.dacodastrack.com/orihime-django:$IMAGE_TAG}
 
 function base()

@@ -1,35 +1,16 @@
 build:
-	buildah bud \
-		--build-arg GIT_BRANCH=development \
-		--tag container-registry.dacodastrack.com/orihime-django \
-		./container
 
-push:
-	buildah push container-registry.dacodastrack.com/orihime-django
+	( cd container ; ./build-image )
 
-run-local:
-	PYTHONPATH=$(PWD) \
-	DJANGO_SETTINGS_MODULE=orihime.settings \
-	ORIHIME_DJANGO_ENVIRONMENT=local \
-	SECRET_KEY=eEpacHhuTVc5c1hkQ0xIVThlZUZVUmVjR3RqS2RmV0UwYkFFcURWYVgzYU5RZHpQ \
-	django-admin check
+deploy:
 
-run-docker: 
-	podman run \
-	    --rm \
-	    --name orihime-django \
-	    --network orihime-django \
-	    --publish 8000:80 \
-	    --env SECRET_KEY=eEpacHhuTVc5c1hkQ0xIVThlZUZVUmVjR3RqS2RmV0UwYkFFcURWYVgzYU5RZHpQ \
-		--env PYTHONPATH=/usr/local/src/orihime-django \
-		--env DJANGO_SETTINGS_MODULE=orihime.settings \
-		--env ORIHIME_DJANGO_ENVIRONMENT=local \
-		--env SECRET_KEY=eEpacHhuTVc5c1hkQ0xIVThlZUZVUmVjR3RqS2RmV0UwYkFFcURWYVgzYU5RZHpQ \
-	    --volume /tmp/orihime-django/logs:/var/log/orihime-django \
-	    --volume /tmp/orihime-django/lib:/var/lib/orihime-django \
-	    --volume /home/dacoda/orihime-django/orihime-django/srv:/srv/orihime-django \
-	    orihime-django 
+	: $${ORIHIME_ENVIRONMENT:?Please define this} && \
+	( cd helm ; helm template --namespace orihime --name $$ORIHIME_ENVIRONMENT . | kubectl apply -f - )
 
-deploy: 
-	kubectl patch -n orihime deployment orihime-django-deployment \
+	kubectl patch -n orihime deployment orihime-django-$$ORIHIME_ENVIRONMENT \
 		-p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"date\":\"`date +'%s'`\"}}}}}"
+
+teardown:
+
+	: $${ORIHIME_ENVIRONMENT:?Please define this} && \
+	( cd helm ; helm template --namespace orihime --name $$ORIHIME_ENVIRONMENT . | kubectl delete -f - )
