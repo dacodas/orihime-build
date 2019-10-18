@@ -1,8 +1,4 @@
-build:
-
-	( cd container ; ./build-image )
-
-deploy:
+deploy: build
 
 	: $${ORIHIME_ENVIRONMENT:?Please define this} && \
 	( cd helm ; helm template --namespace orihime --name $$ORIHIME_ENVIRONMENT . | kubectl apply -f - )
@@ -10,7 +6,14 @@ deploy:
 	kubectl patch -n orihime deployment orihime-django-$$ORIHIME_ENVIRONMENT \
 		-p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"date\":\"`date +'%s'`\"}}}}}"
 
+build:
+
+	( cd container ; buildah unshare ./build-image )
+
 teardown:
 
 	: $${ORIHIME_ENVIRONMENT:?Please define this} && \
 	( cd helm ; helm template --namespace orihime --name $$ORIHIME_ENVIRONMENT . | kubectl delete -f - )
+
+
+.PHONY: build deploy teardown
