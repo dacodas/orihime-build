@@ -1,0 +1,254 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "trie.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "orihime.labels" . | indent 4 }}
+    orihime/component: goo-trie
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: orihime-goo-trie
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orihime-goo-trie
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+      - name: goo-trie
+        image: container-registry.dacodastrack.com/goo-trie:{{ include "orihime.imageTag" . }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7081
+        livenessProbe:
+          tcpSocket:
+            port: 7081
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 7081
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dict.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "orihime.labels" . | indent 4 }}
+    orihime/component: goo-dict
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: orihime-goo-dict
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orihime-goo-dict
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+      - name: goo-dict
+        image: container-registry.dacodastrack.com/goo-dict:{{ include "orihime.imageTag" . }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+          - mountPath: /usr/local/apache2/htdocs
+            name: goo-dictionary
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: goo-dictionary
+          hostPath:
+            path: /var/lib/goo-dictionary/exports/goo-dictionary
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mod.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "orihime.labels" . | indent 4 }}
+    orihime/component: mod-goo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: orihime-mod-goo
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orihime-mod-goo
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+      - name: apache
+        image: container-registry.dacodastrack.com/mod-goo:{{ include "orihime.imageTag" . }}
+        imagePullPolicy: Always
+        env:
+        - name: GOO_TRIE_HOST
+          value: {{ include "trie.fullname" . }}
+        - name: GOO_TRIE_PORT
+          value: "7081"
+        - name: GOO_DICTIONARY_HOST
+          value: {{ include "dict.fullname" . }}
+        - name: GOO_DICTIONARY_PORT
+          value: "80"
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+--- 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "django.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "orihime.labels" . | indent 4 }}
+    orihime/component: orihime-django
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: orihime-django
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orihime-django
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+      - name: orihime-django
+        image: container-registry.dacodastrack.com/orihime-django:{{ include "orihime.imageTag" . }}
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /var/lib/orihime-django
+          name: orihime-django
+        - mountPath: /var/log/orihime-django
+          name: orihime-django-logs
+        - mountPath: /srv/orihime-django
+          name: orihime-django-srv
+        env:
+        - name: ORIHIME_DJANGO_ENVIRONMENT
+          value: {{ .Values.djangoEnvironment }}
+        - name: ORIHIME_RELEASE
+          value: {{ .Release.Name }}
+        - name: ORIHIME_NAMESPACE
+          value: {{ .Release.Namespace }}
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "django.fullname" . }}
+              key: SECRET_KEY
+        ports:
+        - containerPort: 80
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: orihime-django
+        persistentVolumeClaim:
+          claimName: {{ include "django.fullname" . }}
+      - name: orihime-django-logs
+        hostPath:
+          path: /var/log/{{ include "django.fullname" . }}
+      - name: orihime-django-srv
+        hostPath:
+          path: /srv/{{ include "django.fullname" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

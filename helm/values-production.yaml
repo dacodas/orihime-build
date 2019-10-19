@@ -1,0 +1,16 @@
+replicaCount: 1
+
+djangoEnvironment: kubernetes_production
+
+imagePullSecrets:
+  - name: container-registry-dacodastrack-com-secret
+
+# imageTagOverride: production-1-abcde
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
