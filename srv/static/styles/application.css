@@ -1,0 +1,12 @@
+body
+{
+    margin: 0 auto;
+    max-width: 900px;
+    font-size: 1.25em;
+}
+
+span.source
+{
+    color: grey;
+    font-size: 0.6em;
+}
