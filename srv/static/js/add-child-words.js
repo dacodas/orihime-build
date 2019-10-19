@@ -66,11 +66,13 @@ function handle_search_response(event)
     div.innerHTML = "<div class=\"word-selection-container\"><div class=\"word-selection\"><ul>" + search_request.responseText + "</ul></div></div>";
     document.body.appendChild(div)
 
+    div.onclick = function (event) { if ( event.eventphase == event.bubbling_phase ) { this.remove() } }
+
     // 1. Append child
     // 2. Count number of list items in new element
     // 3. Only go through UI with user if there are more than one
 
-    search_items = document.evaluate("//*[@id=\"overlay\"]/div/ul/li", div)
+    search_items = document.evaluate("//div[@class=\"word-selection\"]/ul/li", document)
 
     var search_item = search_items.iterateNext(); 
     while (search_item)
