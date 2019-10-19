@@ -1,0 +1,14 @@
+replicaCount: 1
+
+djangoEnvironment: kubernetes
+
+imagePullSecrets:
+  - name: container-registry-dacodastrack-com-secret
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
