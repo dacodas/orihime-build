@@ -18,5 +18,8 @@ teardown:
 	: $${ORIHIME_ENVIRONMENT:?Please define this} && \
 	( cd helm ; helm template --namespace orihime --name $$ORIHIME_ENVIRONMENT . | kubectl delete -f - )
 
+crawl-aozora:
+
+	node crawl-aozora.js > >(tee -a output) 2> >(tee -a error)
 
 .PHONY: build deploy teardown
